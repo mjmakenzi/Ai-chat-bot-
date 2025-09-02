@@ -8,10 +8,9 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain_core.runnables import RunnablePassthrough
 from langchain_community.chat_message_histories import ChatMessageHistory
-from langchain_core.retrievers import BaseRetriever
 from langchain.chains import create_history_aware_retriever, create_retrieval_chain
 
 
@@ -33,14 +32,6 @@ texts = text_splitter.split_documents(documents)
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 vectorstore = Chroma.from_documents(texts, embeddings)
 retriever = vectorstore.as_retriever()
-
-# Build a chat prompt with a history placeholder
-prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are a helpful assistant."),
-    MessagesPlaceholder(variable_name="history"),
-    ("human", "{input}"),
-])
-
 
 # Define prompts for retrieval and answering
 contextualize_q_system_prompt = (
@@ -75,8 +66,11 @@ qa_prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-# Create the retrieval chain
-qa_chain = create_retrieval_chain(history_aware_retriever, qa_prompt)
+# Create the answer chain: prompt -> llm -> to string
+answer_chain = qa_prompt | llm | StrOutputParser()
+
+# Create the retrieval chain (retriever + answer chain)
+qa_chain = create_retrieval_chain(history_aware_retriever, answer_chain)
 
 # Set up in-memory chat history
 store = {}
