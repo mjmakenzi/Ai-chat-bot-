@@ -1,0 +1,3 @@
+The Eiffel Tower is in Paris.
+Python was created by Guido van Rossum.
+AI stands for Artificial Intelligence.
